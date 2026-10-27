@@ -1,12 +1,20 @@
 # Changelog
 
+## 1.1.0
+
+- Four simultaneous creature slots instead of three.
+- 20-minute morning, day, evening, and night cycle with mood palettes and smooth 30-second transitions.
+- Random dry/rain scheduler with fade in and fade out; existing rain toggle now acts as random rain permission.
+- Mythic creatures megalodon, leviathan, and kraken alongside the 11 real species.
+- Native `FrameAnimation` scene (no full-screen Canvas repaint) with 12-strip cached creature textures.
+- Phase/weather overrides and zebra shark in the standalone preview.
+- New `checks/environment-check.mjs`, native `checks/benchmark.qml` metrics, and updated `checks/ocean-check.qml`.
+
 ## 1.0.0
 
-- Wallpaper native KDE Plasma 6: hewan laut ASCII bergantian, kawanan berwarna, hujan, ombak, dan kabut ASCII transparan; tanpa jam.
-- Auto-freeze mengikuti jendela yang terlihat pada aktivitas dan virtual desktop saat ini; Show Desktop melanjutkan animasi.
-- Resume membuang waktu saat pause, resize digabungkan, dan render tidak mengantrikan simulasi terpisah.
-- Konfigurasi FPS dan jenis hewan tersimpan; preview mandiri tidak ikut auto-freeze.
-- Pemeriksaan Node, lifecycle Qt, benchmark Canvas nyata, dan pengukuran CPU/RAM Linux tanpa dependensi tambahan.
-- Lisensi MIT, atribusi `ascii-sharks`, dan panduan pasang/perbarui/hapus melalui `kpackagetool6`.
-
-Angka FPS merupakan target, bukan jaminan. `Canvas.Image` tetap memakai CPU dan pengunggahan tekstur; auto-freeze menghentikan pekerjaan wallpaper, bukan seluruh proses Plasma.
+- Native KDE Plasma 6 wallpaper: rotating ASCII marine life, colored schools, rain, waves, and transparent ASCII mist; clock-free.
+- Auto-freeze tracking visible windows across the current activity and virtual desktop; Show Desktop resumes animation.
+- Clean resume discarding pause duration, coalesced resize, and unqueued rendering.
+- Configurable FPS and creature filters with persistent settings; standalone preview independent of auto-freeze.
+- Node unit checks, Qt lifecycle smoke tests, Canvas benchmarks, and Linux CPU/RAM measurement scripts without extra dependencies.
+- MIT license, `ascii-sharks` attribution, and installation instructions via `kpackagetool6`.

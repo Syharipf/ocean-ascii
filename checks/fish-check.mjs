@@ -15,10 +15,10 @@ Math.random = seededRandom;
 
 try {
   // 1. Shark specifications exist for all supported kinds
-  const speciesList = ["manta", "turtle", "whale", "jellyfish", "hammerhead", "tiger", "mako", "thresher", "swordfish", "squid", "all"];
+  const speciesList = ["manta", "turtle", "whale", "jellyfish", "hammerhead", "tiger", "mako", "thresher", "swordfish", "squid", "zebra", "megalodon", "leviathan", "kraken", "all"];
   for (const kind of speciesList) {
     const specs = getSharkSpecs(kind);
-    assert(Array.isArray(specs) && specs.length > 0, `Species ${kind} must provide specs`);
+    assert.equal(specs.length, 4, `Species ${kind} must provide exactly 4 slots`);
     for (const spec of specs) {
       assert(typeof spec.kind === "string" && spec.kind.length > 0, "Spec kind must be string");
       assert(Number.isFinite(spec.size) && spec.size > 0, "Spec size must be positive finite");
@@ -45,7 +45,7 @@ try {
 
   // Small viewport
   engine.resize(32, 24);
-  assert(engine.world.sharks.length > 0, "World should initialize sharks on small dimensions");
+  assert.equal(engine.world.sharks.length, 4, "World should initialize exactly 4 sharks on small dimensions");
   for (const s of engine.world.sharks) {
     for (let i = 0; i < s.nodes.length; i++) {
       assert(Number.isFinite(s.nodes[i]), "Shark spine nodes must be finite on small dimensions");
@@ -54,7 +54,7 @@ try {
 
   // Standard viewport
   engine.resize(1920, 1080);
-  assert(engine.world.sharks.length > 0, "Sharks initialized");
+  assert.equal(engine.world.sharks.length, 4, "Exactly 4 sharks initialized");
   assert(engine.world.fish.length > 0, "Fish initialized");
   assert(Array.isArray(engine.clouds.clouds), "Clouds array exposed");
   assert(engine.clouds.epoch > 0, "Cloud epoch increments on resize");
@@ -62,7 +62,7 @@ try {
   // 3. Movement and coordinates are finite
   const initShark0Pos = engine.world.sharks[0].nodes[0];
   for (let i = 0; i < 30; i++) {
-    engine.step(1 / 60);
+    engine.step(1 / 30);
   }
   assert.notEqual(engine.world.sharks[0].nodes[0], initShark0Pos, "Shark spine node advances after steps");
   for (const s of engine.world.sharks) {
@@ -100,7 +100,7 @@ try {
 
   // 5. Accumulator clamp and resetStep
   engine.step(0.5); // large delta
-  assert(engine.acc <= 4 * (1 / 60) + 1e-6, "Accumulator must clamp to MAX_STEPS * STEP without dropping fractional progression");
+  assert(engine.acc <= 3 * (1 / 30) + 1e-6, "Accumulator must clamp to MAX_STEPS * STEP without dropping fractional progression");
   engine.resetStep();
   assert.equal(engine.acc, 0, "resetStep zeroes accumulator");
   const timeBeforeZeroDelta = engine.world.time;
@@ -124,7 +124,7 @@ try {
   }
 
   // Step physics to trigger rotation transition
-  engine.step(1 / 60);
+  engine.step(1 / 30);
 
   // Shark must have rotated to a new valid species and respawned
   assert.equal(testShark.age, 0, "Rotated shark age resets to 0");
@@ -144,15 +144,15 @@ try {
     fixedShark.nodes[n + 1] = H + L * 2;
   }
 
-  engine.step(1 / 60);
+  engine.step(1 / 30);
   assert.equal(fixedShark.kind, "mako", "Explicit species must NOT rotate even when forced offscreen with elapsed age");
 
   const rotating = new OceanEngine({ sharkKind: "all" });
   rotating.resize(1366, 768);
   const initialKinds = rotating.world.sharks.map(s => s.kind);
   let rotatedNaturally = false;
-  for (let tick = 0; tick < 60 * 60; tick++) {
-    rotating.step(1 / 60);
+  for (let tick = 0; tick < 60 * 30; tick++) {
+    rotating.step(1 / 30);
     if (rotating.world.sharks.some((s, i) => s.kind !== initialKinds[i])) {
       rotatedNaturally = true;
       break;

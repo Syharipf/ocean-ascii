@@ -21,7 +21,10 @@ Kirigami.FormLayout {
         textRole: "text"
         valueRole: "value"
         model: [
-            { text: "Bergantian Otomatis (Semua 11 Hewan Laut)", value: "all" },
+            { text: "Bergantian Otomatis (Hewan & Makhluk Mistis)", value: "all" },
+            { text: "Megalodon (Hiu Purba Raksasa)", value: "megalodon" },
+            { text: "Leviathan (Naga Laut Purba)", value: "leviathan" },
+            { text: "Kraken (Monster Gurita Abisal)", value: "kraken" },
             { text: "Pari Manta (Manta Ray)", value: "manta" },
             { text: "Penyu Laut (Sea Turtle)", value: "turtle" },
             { text: "Paus / Orca (Whale)", value: "whale" },
@@ -31,7 +34,8 @@ Kirigami.FormLayout {
             { text: "Hammerhead (Hiu Martil)", value: "hammerhead" },
             { text: "Tiger Shark (Hiu Harimau)", value: "tiger" },
             { text: "Shortfin Mako (Hiu Mako)", value: "mako" },
-            { text: "Thresher Shark (Hiu Tikus)", value: "thresher" }
+            { text: "Thresher Shark (Hiu Tikus)", value: "thresher" },
+            { text: "Zebra Shark (Hiu Zebra)", value: "zebra" }
         ]
         currentIndex: Math.max(0, indexOfValue(root.cfg_sharkKind))
         onActivated: root.cfg_sharkKind = currentValue
@@ -45,8 +49,8 @@ Kirigami.FormLayout {
 
     Controls.CheckBox {
         id: rainCheck
-        Kirigami.FormData.label: "Rintik Hujan Realistis:"
-        text: "Tampilkan rintik hujan dan riak air di laut"
+        Kirigami.FormData.label: "Hujan acak:"
+        text: "Izinkan hujan datang dan reda otomatis"
     }
 
     Controls.CheckBox {

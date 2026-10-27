@@ -16,3 +16,4 @@ jobs:
         with:
           node-version: '22'
       - run: node checks/fish-check.mjs
+      - run: node checks/environment-check.mjs

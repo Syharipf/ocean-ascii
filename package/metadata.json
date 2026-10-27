@@ -3,8 +3,9 @@
     "KPlugin": {
         "Id": "org.local.lautascii",
         "Name": "Laut ASCII",
-        "Description": "Laut malam ASCII bergerak dari atas",
-        "Version": "1.0",
+        "Description": "Animated top-down ASCII ocean wallpaper with a 20-minute day/night cycle, random rain, ASCII waves, and mythic sea creatures",
+        "Version": "1.1.0",
+        "Authors": [{ "Name": "Syharipf" }],
         "License": "MIT",
         "Icon": "preferences-desktop-wallpaper"
     }
