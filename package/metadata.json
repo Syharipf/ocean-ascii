@@ -1,0 +1,11 @@
+{
+    "KPackageStructure": "Plasma/Wallpaper",
+    "KPlugin": {
+        "Id": "org.local.lautascii",
+        "Name": "Laut ASCII",
+        "Description": "Laut malam ASCII bergerak dari atas",
+        "Version": "1.0",
+        "License": "MIT",
+        "Icon": "preferences-desktop-wallpaper"
+    }
+}
