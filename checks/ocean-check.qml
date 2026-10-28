@@ -47,6 +47,9 @@ Window {
                 const fr = fishRepeaters[0];
                 const quota = ocean.qualityLevel === 2 ? 80 : ocean.qualityLevel === 1 ? 120 : 160;
                 check.verify(fr.count === Math.min(quota, ocean.fishCount), "fishRepeater.count matches expected quota");
+                check.verify(ocean.engine.ambience !== undefined, "ambience system attached");
+                const amb = ocean.engine.frame.ambience;
+                check.verify(!!amb && amb.glints.length > 0, "ambience glints populated for current phase");
 
                 // Grab test image before pause
                 check.verify(ocean.grabToImage(function(result) {

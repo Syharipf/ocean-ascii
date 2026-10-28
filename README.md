@@ -1,16 +1,16 @@
 # Laut ASCII (plasma-ascii-ocean)
 
-An animated, top-down ASCII ocean wallpaper for KDE Plasma 6, featuring marine life, dynamic day/night cycles, random rain, rolling waves, and translucent ASCII mist.
+An animated, top-down ASCII ocean wallpaper for KDE Plasma 6, featuring marine life, dynamic day/night cycles, random rain or snow, rolling waves, and translucent ASCII mist.
 
 ![Laut ASCII animated preview](docs/preview.gif)
-*Montage of 4 segments (morning, day with rain, evening, night with rain) highlighting all 14 marine species (11 real, 3 mythic) across active phases and weather conditions.*
+*Montage of 12 segments (4 phases × 3 weathers: clear, rain, snow; 2 s each = 24 s) highlighting all 14 marine species (11 real, 3 mythic) across active phases and weather conditions.*
 **Package ID:** `org.local.lautascii`  
 **License:** [MIT](LICENSE)
 
 ## Features
 
 - **An evolving ocean:** four large marine animal slots appear simultaneously and rotate naturally between species, alongside colorful schools of fish.
-- **20-Minute day-night cycle & dynamic weather:** continuous morning, day, evening, and night phases (5 minutes each) with smooth transitions, accompanied by local stochastic rain showers.
+- **20-Minute day-night cycle & dynamic weather:** continuous morning, day, evening, and night phases (5 minutes each) with smooth transitions, accompanied by local stochastic rain or snow spells (snow rarer, 35%).
 - **Mood lighting:** each phase tints water, caustics, foam and mist, and the ocean keeps a soft radial caustic glow with peripheral depth vignette instead of a flat single-tone gradient.
 - **Clean desktop:** no built-in clock or desktop control overlay.
 - **Automatic pause:** animation freezes when application windows are visible on the current virtual desktop and activity. Minimized and hidden windows are ignored; Show Desktop resumes animation. Auto-pause is disabled in the standalone preview.
@@ -88,7 +88,7 @@ kpackagetool6 --type Plasma/Wallpaper --remove org.local.lautascii
 ## Performance and limitations
 
 - **Target FPS is not guaranteed FPS.** Actual frame rates depend on screen resolution, hardware, Qt, and the selected effects.
-- **Rendering is native scene-graph work.** Creatures are 12 cached strip textures moved and rotated by Qt Quick; fish, waves, mist, rain and ripples are native text/rectangle items. No full-screen Canvas is repainted per frame.
+- **Rendering is native scene-graph work.** Creatures are 12 cached strip textures moved and rotated by Qt Quick; fish, waves, mist, rain and ripples are native text/rectangle items; caustic specks are a cached Canvas repainted about once per second and the per-phase ambience is native text/rectangle items. No full-screen Canvas is repainted per frame.
 - **Work is bounded:** animal shapes are classified once and then warped along their moving spines. ASCII mist uses cached native text. Frames are paced to avoid continuously queuing work.
 - **Automatic pause saves work, not all Plasma CPU usage.** It stops wallpaper simulation and periodic painting; panels and other widgets may still consume resources.
 - **Battery use:** animated wallpaper still consumes power while running. Keep automatic pause enabled, disable effects, or use a static wallpaper when battery life matters most.
@@ -150,7 +150,7 @@ Validates the 20-minute cycle clock, mood palette transitions, and deterministic
 qml6 checks/capture-gif.qml
 ```
 
-Records 120 PNG frames to `/tmp/laut-gif-frames` across all four segments (morning, day with rain, evening, and night with rain) for building `docs/preview.gif`.
+Records 240 PNG frames to `/tmp/laut-gif-frames` across all 12 combinations (4 phases × clear, rain, snow; 20 frames / 2 s each) for building `docs/preview.gif`.
 
 ### Qt lifecycle regression check
 

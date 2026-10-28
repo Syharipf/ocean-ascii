@@ -88,7 +88,11 @@ Item {
     Rectangle {
         id: bgSea
         anchors.fill: parent
-        color: ocean.currentPalette ? ocean.currentPalette.sea : "#0e3846"
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: ocean.currentPalette && ocean.currentPalette.seaGrad ? ocean.currentPalette.seaGrad : "#204e57" }
+            GradientStop { position: 0.55; color: ocean.currentPalette ? ocean.currentPalette.sea : "#0e3846" }
+            GradientStop { position: 1.0; color: ocean.currentPalette && ocean.currentPalette.sea ? ocean.currentPalette.sea : "#0e3846" }
+        }
     }
 
     // Soft radial caustics & sunlight diffusion across the ocean surface (natural overhead POV)
@@ -159,6 +163,19 @@ Item {
             }
         }
     }
+    // Cached caustic speck texture (repainted about once per second, then drifted)
+    Caustics {
+        id: caustics
+        anchors.fill: parent
+        frame: ocean.engine ? ocean.engine.frame : null
+        frameSerial: ocean.frameSerial
+        palette: ocean.currentPalette
+        light: ocean.currentLight
+        enabled: ocean.showWaves
+        active: ocean.animating
+        cellWidth: ocean.engine ? ocean.engine.cellWidth : 12
+        cellHeight: ocean.engine ? ocean.engine.cellHeight : 18
+    }
 
     // Native Atmosphere (Clouds, Swells/Waves, Wakes) - rendered in ocean water layer
     Atmosphere {
@@ -213,6 +230,29 @@ Item {
             font.family: "monospace"
             font.pixelSize: 13
             font.bold: true
+        }
+    }
+
+    // Surface Snow layer (flakes drift below the rain layer, above the water)
+    Item {
+        anchors.fill: parent
+        visible: ocean.showRain && ocean.engine && ocean.engine.frame && ocean.engine.frame.snowIntensity > 0
+
+        Repeater {
+            model: ocean.engine && ocean.engine.frame && ocean.engine.frame.snowFlakes ? ocean.engine.frame.snowFlakes.length : 0
+
+            Text {
+                required property int index
+                readonly property var s: ocean.engine.frame.snowFlakes[index]
+                visible: s && s.y >= -12 && s.y <= ocean.height + 12 && s.x >= -16 && s.x <= ocean.width + 16
+                x: { ocean.frameSerial; return s ? s.x : 0; }
+                y: { ocean.frameSerial; return s ? s.y : 0; }
+                text: s ? s.glyph : "·"
+                color: ocean.currentPalette && ocean.currentPalette.foam ? ocean.currentPalette.foam : "#e8f7ff"
+                font.family: "monospace"
+                font.pixelSize: s ? s.size : 10
+                opacity: s ? s.alpha * ocean.engine.frame.snowIntensity * ocean.currentLight : 0
+            }
         }
     }
 

@@ -12,12 +12,26 @@ Window {
     visible: true
     title: "Laut ASCII — Preview"
 
+    property bool tourActive: tourCheck.checked
+    property int tourIndex: 0
+    readonly property var tourPhases: ["morning", "day", "evening", "night"]
+    readonly property var tourWeathers: ["clear", "rain", "snow"]
+    readonly property string tourPhase: tourPhases[Math.floor(tourIndex / 3) % tourPhases.length]
+    readonly property string tourWeather: tourWeathers[tourIndex % tourWeathers.length]
+
+    Timer {
+        interval: 2000
+        repeat: true
+        running: previewWin.tourActive
+        onTriggered: previewWin.tourIndex = (previewWin.tourIndex + 1) % 12
+    }
+
     UI.Ocean {
         id: ocean
         anchors.fill: parent
         sharkKind: kindSelector.currentValue
-        previewPhase: phaseSelector.currentValue
-        previewWeather: weatherSelector.currentValue
+        previewPhase: tourCheck.checked ? previewWin.tourPhase : phaseSelector.currentValue
+        previewWeather: tourCheck.checked ? previewWin.tourWeather : weatherSelector.currentValue
         pauseOnAppOpen: false
         showClouds: cloudCheck.checked
         showRain: rainCheck.checked
@@ -118,6 +132,7 @@ Window {
                     id: phaseSelector
                     anchors.verticalCenter: parent.verticalCenter
                     implicitWidth: 150
+                    enabled: !tourCheck.checked
                     textRole: "text"
                     valueRole: "value"
                     model: [
@@ -142,12 +157,29 @@ Window {
                     anchors.verticalCenter: parent.verticalCenter
                     implicitWidth: 140
                     textRole: "text"
+                    enabled: !tourCheck.checked
                     valueRole: "value"
                     model: [
                         { text: "Auto (Random)", value: "auto" },
                         { text: "Clear (Cerius)", value: "clear" },
-                        { text: "Rain (0.65)", value: "rain" }
+                        { text: "Rain (0.65)", value: "rain" },
+                        { text: "Snow (0.65)", value: "snow" }
                     ]
+                }
+
+                Controls.CheckBox {
+                    id: tourCheck
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Tour 12 × 2 s"
+                }
+
+                Controls.Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: tourCheck.checked
+                    text: previewWin.tourPhase + " / " + previewWin.tourWeather
+                    color: "#ffc53d"
+                    font.family: "monospace"
+                    font.bold: true
                 }
             }
         }

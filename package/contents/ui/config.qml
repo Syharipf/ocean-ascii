@@ -49,8 +49,8 @@ Kirigami.FormLayout {
 
     Controls.CheckBox {
         id: rainCheck
-        Kirigami.FormData.label: "Hujan acak:"
-        text: "Izinkan hujan datang dan reda otomatis"
+        Kirigami.FormData.label: "Cuaca acak:"
+        text: "Izinkan hujan atau salju datang dan reda otomatis"
     }
 
     Controls.CheckBox {

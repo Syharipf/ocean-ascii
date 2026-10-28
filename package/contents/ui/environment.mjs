@@ -103,7 +103,7 @@ class Environment {
     this.elapsed = 0;
 
     // Weather schedule
-    this.inRain = false;
+    this.weatherKind = "clear"; // "clear" | "rain" | "snow"
     this.intervalStart = 0;
     this.intervalDuration = 180 + this.random() * 180; // dry 180-360s
     this.peakIntensity = 0.45 + this.random() * 0.40;  // 0.45-0.85
@@ -115,18 +115,19 @@ class Environment {
 
     while (this.elapsed >= this.intervalStart + this.intervalDuration) {
       this.intervalStart += this.intervalDuration;
-      this.inRain = !this.inRain;
-      if (this.inRain) {
-        this.intervalDuration = 60 + this.random() * 60;   // rain 60-120s
+      if (this.weatherKind === "clear") {
+        this.weatherKind = this.random() < 0.35 ? "snow" : "rain";
+        this.intervalDuration = 60 + this.random() * 60;   // wet 60-120s
         this.peakIntensity = 0.45 + this.random() * 0.40;  // peak 0.45-0.85
       } else {
+        this.weatherKind = "clear";
         this.intervalDuration = 180 + this.random() * 180; // dry 180-360s
       }
     }
   }
 
-  currentRainIntensity() {
-    if (!this.inRain) return 0;
+  currentPrecipitationIntensity() {
+    if (this.weatherKind === "clear") return 0;
     const t = this.elapsed - this.intervalStart;
     const dur = this.intervalDuration;
     const fade = 10;
@@ -166,20 +167,33 @@ class Environment {
       effectiveTransition = 0;
     }
 
+    let resolvedWeather = this.weatherKind;
     let rainIntensity = 0;
+    let snowIntensity = 0;
     if (weather === "clear") {
-      rainIntensity = 0;
+      resolvedWeather = "clear";
     } else if (weather === "rain") {
+      resolvedWeather = "rain";
       rainIntensity = 0.65;
+    } else if (weather === "snow") {
+      resolvedWeather = "snow";
+      snowIntensity = 0.65;
     } else {
-      rainIntensity = this.currentRainIntensity();
+      const precip = this.currentPrecipitationIntensity();
+      if (this.weatherKind === "rain") {
+        rainIntensity = precip;
+      } else if (this.weatherKind === "snow") {
+        snowIntensity = precip;
+      }
     }
 
     return {
       phase: effectivePhase,
+      weather: resolvedWeather,
       cycleSeconds,
       transition: effectiveTransition,
       rainIntensity,
+      snowIntensity,
       palette: effectivePalette
     };
   }

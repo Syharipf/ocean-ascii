@@ -98,6 +98,8 @@ test("large advance equivalence to step-by-step advance", () => {
   assert.equal(s1.phase, s2.phase);
   assert.equal(s1.cycleSeconds, s2.cycleSeconds);
   assert.equal(s1.rainIntensity, s2.rainIntensity);
+  assert.equal(s1.snowIntensity, s2.snowIntensity);
+  assert.equal(s1.weather, s2.weather);
   assert.deepEqual(s1.palette, s2.palette);
   assert.equal(callCount1, callCount2);
 });
@@ -116,4 +118,33 @@ test("preview overrides don't mutate elapsed or RNG state", () => {
   assert.equal(backToAuto.phase, "morning");
   assert.equal(backToAuto.rainIntensity, 0);
   assert.equal(env.elapsed, beforeElapsed);
+});
+
+test("snow override in snapshot", () => {
+  const env = new Environment({ random: () => 0.5 });
+  const snap = env.snapshot({ weather: "snow" });
+  assert.equal(snap.weather, "snow");
+  assert.equal(snap.snowIntensity, 0.65);
+  assert.equal(snap.rainIntensity, 0);
+});
+
+test("deterministic snow schedule with random 0.1", () => {
+  const env = new Environment({ random: () => 0.1 });
+  // dry: 180 + 0.1*180 = 198s
+  assert.equal(env.snapshot().weather, "clear");
+  assert.equal(env.snapshot().snowIntensity, 0);
+
+  env.advance(198); // t=198: snow starts (0.1 < 0.35)
+  const s198 = env.snapshot();
+  assert.equal(s198.weather, "snow");
+  assert.equal(s198.snowIntensity, 0);
+
+  env.advance(5); // t=203: fading in
+  const s203 = env.snapshot();
+  assert(s203.snowIntensity > 0 && s203.snowIntensity < 0.49);
+
+  env.advance(10); // t=213: peak at 0.45 + 0.1*0.4 = 0.49
+  const s213 = env.snapshot();
+  assert.equal(Math.round(s213.snowIntensity * 1000) / 1000, 0.49);
+  assert.equal(s213.rainIntensity, 0);
 });

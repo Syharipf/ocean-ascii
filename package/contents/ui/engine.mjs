@@ -1,4 +1,5 @@
 import { Environment } from "./environment.mjs";
+import { Ambience } from "./ambience.mjs";
 const TAU = Math.PI * 2;
 var clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
 var rand = (lo, hi) => lo + Math.random() * (hi - lo);
@@ -1423,6 +1424,58 @@ var RainSystem = class {
     ctx.restore();
   }
 };
+var SnowSystem = class {
+  constructor(count = 110) {
+    this.count = count;
+    this.flakes = [];
+    this.width = 0;
+    this.height = 0;
+    this.enabled = false;
+  }
+  resize(w, h) {
+    this.width = w;
+    this.height = h;
+    if (w <= 0 || h <= 0) return;
+    if (this.flakes.length === 0) {
+      const glyphs = ["*", "+", "·", "'", "."];
+      for (let i = 0; i < this.count; i++) {
+        this.flakes.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: -14 + Math.random() * 28,
+          vy: 18 + Math.random() * 26,
+          sway: 4 + Math.random() * 12,
+          swayFreq: 0.6 + Math.random() * 1.6,
+          phase: Math.random() * Math.PI * 2,
+          glyph: glyphs[Math.floor(Math.random() * glyphs.length)],
+          size: 8 + Math.random() * 6,
+          alpha: 0.30 + Math.random() * 0.55
+        });
+      }
+    }
+  }
+  step(dt, intensity) {
+    this.enabled = intensity > 0;
+    if (!this.enabled || this.width <= 0 || this.height <= 0) return;
+    for (let i = 0; i < this.flakes.length; i++) {
+      const f = this.flakes[i];
+      f.phase += f.swayFreq * dt;
+      f.x += (f.vx + Math.sin(f.phase) * f.sway) * dt;
+      f.y += f.vy * dt;
+      if (f.y > this.height + 12) {
+        f.y = -12;
+        f.x = Math.random() * this.width;
+      } else if (f.y < -12) {
+        f.y = this.height + 12;
+      }
+      if (f.x > this.width + 16) {
+        f.x = -16;
+      } else if (f.x < -16) {
+        f.x = this.width + 16;
+      }
+    }
+  }
+};
 var OceanWaves = class {
   constructor() {
     this.width = 0;
@@ -1717,10 +1770,12 @@ class OceanEngine {
     this.environment = new Environment();
     this.rain = new RainSystem(64);
     this.rain.enabled = this.showRain;
+    this.snow = new SnowSystem(110);
     this.waves = new OceanWaves();
     this.waves.enabled = this.showWaves;
     this.clouds = new CloudSystem();
     this.clouds.enabled = this.showClouds;
+    this.ambience = new Ambience();
 
     this.world = new World(getSharkSpecs(this.currentKind));
     this.world.kindFixed = this.currentKind !== "all";
@@ -1740,11 +1795,14 @@ class OceanEngine {
       fish: [],
       rainDrops: [],
       ripples: [],
+      snowFlakes: [],
+      snowIntensity: 0,
       wakes: [],
       clouds: [],
       swells: [],
       time: 0,
-      interpolation: 0
+      interpolation: 0,
+      ambience: null,
     };
   }
 
@@ -1784,8 +1842,10 @@ class OceanEngine {
 
     this.world.resize(width, height, this.cellWidth, this.cellHeight);
     this.rain.resize(width, height);
+    this.snow.resize(width, height);
     this.waves.resize(width, height);
     this.clouds.resize(width, height);
+    this.ambience.resize(width, height);
 
     this.appearanceCache.clear();
     this.prevWorldSharks = [];
@@ -1813,6 +1873,7 @@ class OceanEngine {
 
     this.environment.advance(clampedDt);
     const envSnap = this.environment.snapshot(overrides);
+    this.ambience.step(clampedDt, envSnap.phase);
 
     if (this.prevWorldSharks.length !== this.world.sharks.length) {
       this.prevWorldSharks = this.world.sharks.map(s => ({
@@ -1846,6 +1907,8 @@ class OceanEngine {
     } else {
       this.rain.enabled = false;
     }
+    const effSnowIntensity = this.showRain ? (envSnap.snowIntensity || 0) : 0;
+    this.snow.step(clampedDt, effSnowIntensity);
 
     if (this.showClouds) {
       this.clouds.step(clampedDt);
@@ -1910,12 +1973,15 @@ class OceanEngine {
     this.frame.fish = this.world.fish;
     this.frame.rainDrops = this.rain.drops;
     this.frame.ripples = this.rain.ripples;
+    this.frame.snowFlakes = this.snow.flakes;
+    this.frame.snowIntensity = effSnowIntensity;
     this.frame.wakes = this.wakePool;
     this.frame.clouds = this.clouds.clouds;
     this.frame.swells = this.waves.swells;
     this.frame.time = this.world.time;
     this.frame.interpolation = alpha;
     this.frame.environment = envSnap;
+    this.frame.ambience = this.ambience.snapshot();
 
     return this.frame;
   }

@@ -11,30 +11,59 @@ Window {
 
     property string outDir: "/tmp/laut-gif-frames"
     property int frameCount: 0
-    property int maxFrames: 120 // 12s at 10fps
+    property int maxFrames: 240 // 24s at 10fps
     property int currentSegment: 0
 
-    // 4 segments (3s each, 30 frames each):
-    // 0: morning-clear (manta, turtle, whale, jellyfish)
-    // 1: day-rain (hammerhead, tiger, mako, thresher)
-    // 2: evening-clear (squid, swordfish, zebra, manta)
-    // 3: night-rain (whale, jellyfish, turtle, hammerhead)
+    // 12 segments (2s each, 20 frames each = 240 frames total):
+    // 4 phases × 3 weathers (clear, rain, snow)
     readonly property var segments: [
         {
             phase: "morning", weather: "clear",
             kinds: [{ kind: "manta", size: 1.0 }, { kind: "turtle", size: 0.88 }, { kind: "whale", size: 0.78 }, { kind: "jellyfish", size: 0.68 }]
         },
         {
-            phase: "day", weather: "rain",
+            phase: "morning", weather: "rain",
+            kinds: [{ kind: "hammerhead", size: 1.0 }, { kind: "tiger", size: 0.88 }, { kind: "mako", size: 0.78 }, { kind: "thresher", size: 0.68 }]
+        },
+        {
+            phase: "morning", weather: "snow",
+            kinds: [{ kind: "whale", size: 1.0 }, { kind: "turtle", size: 0.88 }, { kind: "mako", size: 0.78 }, { kind: "jellyfish", size: 0.68 }]
+        },
+        {
+            phase: "day", weather: "clear",
             kinds: [{ kind: "megalodon", size: 1.15 }, { kind: "hammerhead", size: 0.88 }, { kind: "tiger", size: 0.78 }, { kind: "mako", size: 0.68 }]
+        },
+        {
+            phase: "day", weather: "rain",
+            kinds: [{ kind: "swordfish", size: 1.0 }, { kind: "mako", size: 0.88 }, { kind: "thresher", size: 0.78 }, { kind: "zebra", size: 0.68 }]
+        },
+        {
+            phase: "day", weather: "snow",
+            kinds: [{ kind: "whale", size: 1.0 }, { kind: "hammerhead", size: 0.88 }, { kind: "turtle", size: 0.78 }, { kind: "jellyfish", size: 0.68 }]
         },
         {
             phase: "evening", weather: "clear",
             kinds: [{ kind: "kraken", size: 1.2 }, { kind: "squid", size: 0.88 }, { kind: "swordfish", size: 0.78 }, { kind: "zebra", size: 0.68 }]
         },
         {
+            phase: "evening", weather: "rain",
+            kinds: [{ kind: "tiger", size: 1.0 }, { kind: "mako", size: 0.88 }, { kind: "thresher", size: 0.78 }, { kind: "hammerhead", size: 0.68 }]
+        },
+        {
+            phase: "evening", weather: "snow",
+            kinds: [{ kind: "leviathan", size: 1.25 }, { kind: "whale", size: 0.95 }, { kind: "squid", size: 0.78 }, { kind: "jellyfish", size: 0.68 }]
+        },
+        {
+            phase: "night", weather: "clear",
+            kinds: [{ kind: "leviathan", size: 1.25 }, { kind: "whale", size: 0.95 }, { kind: "jellyfish", size: 0.75 }, { kind: "manta", size: 0.68 }]
+        },
+        {
             phase: "night", weather: "rain",
-            kinds: [{ kind: "leviathan", size: 1.25 }, { kind: "whale", size: 0.95 }, { kind: "jellyfish", size: 0.75 }, { kind: "thresher", size: 0.68 }]
+            kinds: [{ kind: "thresher", size: 1.0 }, { kind: "mako", size: 0.88 }, { kind: "hammerhead", size: 0.78 }, { kind: "tiger", size: 0.68 }]
+        },
+        {
+            phase: "night", weather: "snow",
+            kinds: [{ kind: "kraken", size: 1.2 }, { kind: "squid", size: 0.88 }, { kind: "whale", size: 0.78 }, { kind: "jellyfish", size: 0.68 }]
         }
     ]
 
@@ -65,7 +94,7 @@ Window {
             return;
         }
 
-        const targetSegment = Math.floor(win.frameCount / 30);
+        const targetSegment = Math.floor(win.frameCount / 20);
         if (targetSegment !== win.currentSegment) {
             win.applySegment(targetSegment);
         }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- Dynamic ambient particles: caustics specks, foam sparkles, floating dust motes, and surface birds per cycle phase.
+- Snow weather system with drifting flakes and swaying trajectories alongside rain.
+- Standalone preview tour cycling all 12 phase and weather combinations.
+- Rebuilt preview animation covering all 12 combinations in 24 seconds.
+
 ## 1.1.0
 
 - Four simultaneous creature slots instead of three.
