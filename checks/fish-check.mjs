@@ -160,6 +160,28 @@ try {
   }
   assert(rotatedNaturally, "Mixed mode must naturally rotate within one simulated minute");
 
+  // 8. Rare rain whirlpools: spawn, glyphs, fish influence, and fade-out
+  const maelstrom = new OceanEngine({ sharkKind: "all", showRain: true });
+  maelstrom.resize(1280, 800);
+  const menv = maelstrom.environment;
+  menv.weatherKind = "rain";
+  menv.intervalStart = menv.elapsed;
+  menv.intervalDuration = 600;
+  menv.peakIntensity = 0.7;
+  menv.whirlpoolCount = 0;
+  for (let i = 0; i < 30 * 10; i++) maelstrom.step(1 / 30);
+  assert.equal(maelstrom.frame.whirlpools.length, 0, "No plan => no whirlpool");
+  menv.whirlpoolCount = 1;
+  for (let i = 0; i < 30 * 10; i++) maelstrom.step(1 / 30);
+  assert.equal(maelstrom.frame.whirlpools.length, 1, "Planned whirlpool spawns");
+  const wp = maelstrom.frame.whirlpools[0];
+  assert(Number.isFinite(wp.x) && Number.isFinite(wp.y) && wp.radius > 0 && wp.alpha > 0.5, "Whirlpool visible");
+  assert(maelstrom.frame.whirlpoolGlyphs.some(g => g.alpha > 0.05), "Whirlpool glyph pool populated");
+  assert(maelstrom.world.whirlpoolCount > 0, "Fish physics receives whirlpool influence");
+  menv.whirlpoolCount = 0;
+  for (let i = 0; i < 30 * 3; i++) maelstrom.step(1 / 30);
+  assert.equal(maelstrom.frame.whirlpools.length, 0, "Whirlpool fades out when rain ends");
+
   console.log("Deterministic self-check PASSED.");
 } finally {
   Math.random = origRandom;

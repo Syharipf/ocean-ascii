@@ -171,6 +171,8 @@ var World = class {
     this.sharks = [];
     this.events = [];
     this.pointer = { x: 0, y: 0, active: false };
+    this.whirlpools = [];
+    this.whirlpoolCount = 0;
     /** Fish neighbourhood radius; the spatial hash bucket size matches it. */
     this.perception = 60;
     /** Per-species personal space in px (x, y). */
@@ -453,6 +455,21 @@ var World = class {
           ay += dy / d * FISH_FLEE_K * w;
           fear = Math.max(fear, Math.sqrt(w) * 0.8);
         }
+      }
+      for (let wi = 0; wi < this.whirlpoolCount; wi++) {
+        const wp = this.whirlpools[wi];
+        const ex = f.x - wp.x;
+        const ey = (f.y - wp.y) / WHIRLPOOL_SQUASH;
+        const wd = Math.hypot(ex, ey);
+        if (wd >= wp.radius || wd < 1e-3) continue;
+        const w = 1 - wd / wp.radius;
+        const wnx = ex / wd;
+        const wny = ey / wd;
+        const swirl = 430 * w * w * wp.strength * wp.dir;
+        const pull = 230 * w * w * wp.strength;
+        ax += wnx * pull - wny * swirl;
+        ay += (wny * pull + wnx * swirl) * WHIRLPOOL_SQUASH;
+        fear = Math.max(fear, w * 0.45);
       }
       let alarm = Math.max(f.alarm * calmDecay, fear);
       const relayed = neighbourAlarm * 0.86;
@@ -758,6 +775,8 @@ var FLAG_RIDGE = 4;
 var FLAG_EYE = 5;
 var FLAG_MARK = 6;
 var MARK_GLYPHS = "#%@";
+var FLAG_LIMB = 8;
+var LIMB_GLYPHS = "~;:t,";
 function classicHalfWidth(s) {
   if (s < 0.13) return 0.09 * Math.pow(Math.sin(s / 0.13 * Math.PI / 2), 0.95);
   if (s < 0.3) return 0.09 + 0.016 * smoothstep(0.13, 0.3, s);
@@ -765,6 +784,84 @@ function classicHalfWidth(s) {
   const k = (s - 0.84) / 0.16;
   return 0.019 * (1 - k) + 0.012 * Math.sin(k * Math.PI);
 }
+function mirrorLimbs(base) {
+  const out = [];
+  for (const a of base) {
+    out.push(a);
+    out.push([a[0], -a[1], a[2], -a[3], a[4], -a[5], a[6], a[7], a[8]]);
+  }
+  return out;
+}
+
+function buildLimb(spec, L) {
+  const steps = 10;
+  const pts = new Float32Array((steps + 1) * 2);
+  let minX = Infinity, maxX = -Infinity, minV = Infinity, maxV = -Infinity;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const mt = 1 - t;
+    const x = (mt * mt * spec[0] + 2 * mt * t * spec[2] + t * t * spec[4]) * L;
+    const v = (mt * mt * spec[1] + 2 * mt * t * spec[3] + t * t * spec[5]) * L;
+    pts[i * 2] = x;
+    pts[i * 2 + 1] = v;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (v < minV) minV = v;
+    if (v > maxV) maxV = v;
+  }
+  const pad = Math.max(spec[6], spec[7]) * L * Math.max(1, spec[8] || 1);
+  return {
+    pts,
+    steps,
+    minX: minX - pad,
+    maxX: maxX + pad,
+    minV: minV - pad,
+    maxV: maxV + pad,
+    w0: spec[6] * L,
+    w1: spec[7] * L,
+    paddle: spec[8] || 1
+  };
+}
+
+function sampleLimb(limb, u, v) {
+  const pts = limb.pts;
+  let best = Infinity;
+  let bestT = 0;
+  for (let i = 0; i < limb.steps; i++) {
+    const ax = pts[i * 2];
+    const ay = pts[i * 2 + 1];
+    const dx = pts[i * 2 + 2] - ax;
+    const dy = pts[i * 2 + 3] - ay;
+    const l2 = dx * dx + dy * dy;
+    let t = l2 > 0 ? ((u - ax) * dx + (v - ay) * dy) / l2 : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const d = Math.hypot(u - (ax + dx * t), v - (ay + dy * t));
+    if (d < best) {
+      best = d;
+      bestT = (i + t) / limb.steps;
+    }
+  }
+  const w = limb.w0 + (limb.w1 - limb.w0) * bestT;
+  const grow = limb.paddle > 1 ? 1 + (limb.paddle - 1) * smoothstep(0.8, 0.96, bestT) : 1;
+  const ww = w * grow;
+  if (best > ww) return null;
+  return { t: bestT, shade: 0.35 + 0.55 * (1 - best / (ww || 1)) };
+}
+
+// Giant squid / kraken tentacles: crown of 8 arms extending forward from the head,
+// plus two long feeding tentacles sweeping gracefully backward along the mantle with paddle clubs.
+var KRAKEN_LIMBS = mirrorLimbs([
+  // Arm 1 & 2 (innermost, direct forward reaching):
+  [0.28, 0.015, 0.14, 0.010, 0.01, 0.025, 0.026, 0.007, 1],
+  // Arm 3 & 4 (inner-mid, gentle wave forward):
+  [0.28, 0.038, 0.16, 0.050, 0.03, 0.060, 0.024, 0.006, 1],
+  // Arm 5 & 6 (mid-outer, wide forward reach):
+  [0.28, 0.062, 0.18, 0.095, 0.06, 0.105, 0.022, 0.006, 1],
+  // Arm 7 & 8 (outermost crown arms, splay out then curl in):
+  [0.28, 0.085, 0.20, 0.145, 0.10, 0.140, 0.020, 0.005, 1],
+  // Tentacle 9 & 10 (giant feeding tentacles trailing alongside mantle):
+  [0.28, 0.075, 0.50, 0.220, 0.75, 0.210, 0.016, 0.005, 2.6]
+]);
 
 var SHAPES = {
   classic: {
@@ -1017,56 +1114,70 @@ var SHAPES = {
     gills: [0.27, 0.28],
     tint: [1.45, 0.82, 0.65]
   },
-  // Ancient apex predator: massive broad jaws, jagged dorsal, menacing crimson tint
+  // Otodus megalodon: colossal apex predator, massive broad blunt snout, heavy
+  // barrel-chested girth (~39% length), giant swept falcate pectoral wings, tall crescent tail.
   megalodon: {
     halfWidth: (s) => {
-      if (s < 0.18) return 0.14 * Math.pow(Math.sin(s / 0.18 * Math.PI / 2), 0.5);
-      if (s < 0.42) return 0.14 + 0.04 * smoothstep(0.18, 0.42, s);
-      if (s < 0.82) return 0.03 + 0.15 * Math.pow(1 - (s - 0.42) / 0.4, 1.15);
-      return 0.03 * (1 - (s - 0.82) / 0.18);
+      if (s < 0.16) return 0.070 + 0.095 * Math.pow(s / 0.16, 0.55);
+      if (s < 0.44) return 0.165 + 0.030 * ((s - 0.16) / 0.28);
+      if (s < 0.82) return 0.045 + 0.150 * Math.pow(1 - (s - 0.44) / 0.38, 1.2);
+      return 0.045 * (1 - (s - 0.82) / 0.18);
     },
-    pectoral: [0.18, 0.48, 0.62, 0.32],
+    pectoral: [0.16, 0.46, 0.60, 0.35],
     falcate: true,
-    pelvic: [0.58, 0.68, 0.73, 0.11],
-    caudal: 0.14,
-    dorsal: [0.32, 0.52],
-    secondDorsal: [0.72, 0.78],
+    pelvic: [0.60, 0.68, 0.73, 0.11],
+    caudal: 0.18,
+    dorsal: [0.28, 0.50],
+    secondDorsal: [0.72, 0.77],
     eye: [0.12, 0.16],
-    gills: [0.2, 0.32],
+    gills: [0.18, 0.30],
     tint: [1.35, 0.62, 0.55]
   },
-  // Mythical abyssal serpent: undulating serpentine body, bioluminescent dragon fins
+  // Sea serpent: jawed reptilian head, two body humps, serrated dorsal crest,
+  // two pairs of flippers, finned tail.
   leviathan: {
     halfWidth: (s) => {
-      if (s < 0.12) return 0.08 * Math.sin(s / 0.12 * Math.PI / 2);
-      if (s < 0.85) return 0.08 + 0.02 * Math.sin(s * Math.PI * 4);
-      return 0.08 * (1 - (s - 0.85) / 0.15);
+      if (s < 0.05) return 0.030 * Math.sqrt(s / 0.05);
+      if (s < 0.13) return 0.030 + 0.075 * smoothstep(0.05, 0.13, s);
+      if (s < 0.22) return 0.105 - 0.005 * smoothstep(0.13, 0.22, s);
+      if (s < 0.32) return 0.100 - 0.028 * smoothstep(0.22, 0.32, s);
+      if (s < 0.44) return 0.072 + 0.028 * smoothstep(0.32, 0.44, s);
+      if (s < 0.54) return 0.100 - 0.015 * smoothstep(0.44, 0.54, s);
+      if (s < 0.64) return 0.085 + 0.012 * smoothstep(0.54, 0.64, s);
+      if (s < 0.86) return 0.097 - 0.069 * smoothstep(0.64, 0.86, s);
+      if (s < 0.93) return 0.028 + 0.032 * smoothstep(0.86, 0.93, s);
+      return 0.060 * (1 - smoothstep(0.93, 1.0, s));
     },
-    pectoral: [0.12, 0.28, 0.36, 0.2],
+    pectoral: [0.27, 0.36, 0.41, 0.19],
     falcate: false,
-    pelvic: [0.46, 0.56, 0.64, 0.18],
-    caudal: 0.16,
-    dorsal: [0.15, 0.75],
-    secondDorsal: [0.76, 0.85],
-    eye: [0.08, 0.12],
-    gills: [0.13, 0.2],
+    pelvic: [0.52, 0.60, 0.65, 0.12],
+    caudal: 0.12,
+    dorsal: [0.10, 0.86],
+    secondDorsal: [0.86, 0.90],
+    eye: [0.075, 0.105],
+    gills: [0.22, 0.26],
+    frill: true,
+    reach: 0.20,
     tint: [0.45, 1.35, 1.45]
   },
-  // Mythical abyssal terror: broad crowned mantle, massive tentacular spread, deep violet glow
+  // Giant squid / kraken: crown of 8 arms streaming forward, 2 long feeding tentacles,
+  // head with glowing lateral eyes, muscular mantle with terminal fins.
   kraken: {
     halfWidth: (s) => {
-      if (s < 0.35) return 0.18 * Math.sin(s / 0.35 * Math.PI / 2);
-      if (s < 0.7) return 0.18 * (1 - (s - 0.35) / 0.35 * 0.4);
-      return 0.108 * (1 + 0.4 * Math.sin(s * 30)) * (1 - (s - 0.7) / 0.3);
+      if (s < 0.26) return 0.015 * (s / 0.26);
+      if (s < 0.36) return 0.075 + 0.020 * Math.sin((s - 0.26) / 0.10 * Math.PI);
+      if (s < 0.82) return 0.085 + 0.085 * Math.sin((s - 0.36) / 0.46 * Math.PI);
+      return 0.085 * (1 - (s - 0.82) / 0.18);
     },
-    pectoral: [0.3, 0.75, 0.9, 0.36],
-    falcate: false,
-    pelvic: [0.4, 0.65, 0.8, 0.24],
-    caudal: 0.08,
-    dorsal: [0.15, 0.35],
-    secondDorsal: [0.4, 0.55],
-    eye: [0.22, 0.28],
-    gills: [0.28, 0.32],
+    limbs: KRAKEN_LIMBS,
+    reach: 0.26,
+    pectoral: [0.65, 0.88, 0.96, 0.22],
+    pelvic: null,
+    caudal: 0,
+    dorsal: [1, 1],
+    secondDorsal: [1, 1],
+    eye: [0.29, 0.33],
+    gills: [1, 1],
     tint: [1.25, 0.52, 1.45]
   }
 };
@@ -1123,16 +1234,20 @@ function animalAppearance(kind, length, cellWidth, cellHeight) {
     invLen2[k] = 1 / (segLen[k] * segLen[k]);
   }
   const arcTotal = L;
-  const finTipRight = L * shape.pectoral[3];
+  const pectoral = shape.pectoral || null;
+  const pelvic = shape.pelvic || null;
+  const finTipRight = pectoral ? L * pectoral[3] : 0;
   const finTipLeft = finTipRight;
-  const reach = L * Math.max(shape.pectoral[3], shape.head?.span || 0,
-                             shape.pelvic[3], shape.caudal || 0, 0.2);
+  const reach = L * Math.max(pectoral ? pectoral[3] : 0, shape.head?.span || 0,
+                            pelvic ? pelvic[3] : 0, shape.caudal || 0, shape.reach || 0, 0.2);
 
   const sampler = {
     spine, arc, segSx, segSy, segLen, invLen2, arcTotal,
     finTipLeft, finTipRight, shape, sharkId: 1,
     hitFlag: 0, hitShade: 0
   };
+  const limbs = [];
+  for (const spec of shape.limbs || []) limbs.push(buildLimb(spec, L));
 
   function marked(s, v, L, across) {
     if (shape === SHAPES.tiger) {
@@ -1213,7 +1328,8 @@ function animalAppearance(kind, length, cellWidth, cellHeight) {
       const facing = (bestNx * -0.6 + bestNy * -0.8) * across;
       let shade = 0.58 - across * across * 0.42 + facing * 0.26;
       let flag = FLAG_BODY;
-      if (s > shape.dorsal[0] && s < shape.dorsal[1] && across < 0.3) {
+      const ridgeW = shape.frill ? 0.14 + 0.38 * Math.max(0, Math.sin(u / (L * 0.045))) : 0.3;
+      if (s > shape.dorsal[0] && s < shape.dorsal[1] && across < ridgeW) {
         flag = FLAG_RIDGE;
         shade = 1;
       } else if (s > shape.secondDorsal[0] && s < shape.secondDorsal[1] && across < 0.4) {
@@ -1235,19 +1351,31 @@ function animalAppearance(kind, length, cellWidth, cellHeight) {
       return true;
     }
     const tip = bestSign > 0 ? finTipRight : finTipLeft;
-    const [p0, p1, p2] = shape.pectoral;
-    if (inTriangle(u, a, L * p0, 0, L * p1, 0, L * p2, tip) &&
-    !(shape.falcate && inTriangle(u, a, L * p1, 0, L * (p1 + (p2 - p1) * 0.33), tip * 0.55, L * p2, tip))) {
-      sampler.hitFlag = marked(s, a * bestSign, L, 0) ? FLAG_MARK : FLAG_FIN;
-      sampler.hitShade = 0.38 + 0.22 * (1 - clamp(a / tip, 0, 1));
-      return true;
+    if (pectoral) {
+      const [p0, p1, p2] = pectoral;
+      if (inTriangle(u, a, L * p0, 0, L * p1, 0, L * p2, tip) &&
+      !(shape.falcate && inTriangle(u, a, L * p1, 0, L * (p1 + (p2 - p1) * 0.33), tip * 0.55, L * p2, tip))) {
+        sampler.hitFlag = marked(s, a * bestSign, L, 0) ? FLAG_MARK : FLAG_FIN;
+        sampler.hitShade = 0.38 + 0.22 * (1 - clamp(a / tip, 0, 1));
+        return true;
+      }
     }
-    const [v0, v1, v2, vr] = shape.pelvic;
-    if (inTriangle(u, a, L * v0, 0, L * v1, 0, L * v2, L * vr) ||
-    shape.caudal > 0 && inTriangle(u, a, L * 0.86, 0, L * 0.95, 0, L, L * shape.caudal)) {
+    const pelvicHit = pelvic && inTriangle(u, a, L * pelvic[0], 0, L * pelvic[1], 0, L * pelvic[2], L * pelvic[3]);
+    if (pelvicHit || shape.caudal > 0 && inTriangle(u, a, L * 0.86, 0, L * 0.95, 0, L, L * shape.caudal)) {
       sampler.hitFlag = FLAG_FIN;
       sampler.hitShade = 0.36;
       return true;
+    }
+    const v = a * bestSign;
+    for (let i = 0; i < limbs.length; i++) {
+      const limb = limbs[i];
+      if (u < limb.minX || u > limb.maxX || v < limb.minV || v > limb.maxV) continue;
+      const hit = sampleLimb(limb, u, v);
+      if (hit) {
+        sampler.hitFlag = FLAG_LIMB;
+        sampler.hitShade = hit.shade;
+        return true;
+      }
     }
     return false;
   }
@@ -1287,6 +1415,9 @@ function animalAppearance(kind, length, cellWidth, cellHeight) {
         } else if (flag === FLAG_MARK) {
           level = 24 + shade * 22;
           glyph = MARK_GLYPHS[(hashVal >>> 8) % MARK_GLYPHS.length];
+        } else if (flag === FLAG_LIMB) {
+          level = 58 + shade * 96;
+          glyph = LIMB_GLYPHS[(hashVal >>> 8) % LIMB_GLYPHS.length];
         } else if (flag === FLAG_FIN) {
           level = 40 + shade * 120;
           glyph = FIN_GLYPHS[(hashVal >>> 8) % FIN_GLYPHS.length];
@@ -1531,6 +1662,148 @@ var SnowSystem = class {
       if (f.y < -20) f.y = this.height + 20;
       else if (f.y > this.height + 20) f.y = -20;
     }
+  }
+};
+var WHIRLPOOL_MAX = 2;
+var WHIRLPOOL_ARMS = 4;
+var WHIRLPOOL_ARM_GLYPHS = 14;
+var WHIRLPOOL_GLYPHS_PER = WHIRLPOOL_ARMS * WHIRLPOOL_ARM_GLYPHS + 2; // 58 per whirlpool
+var WHIRLPOOL_SQUASH = 0.55;
+var WHIRLPOOL_ARM_CHARS = ["~", "o", "\xB7", "~"];
+
+var WhirlpoolSystem = class {
+  constructor() {
+    this.width = 0;
+    this.height = 0;
+    this.active = [];        // live whirlpools rendered now
+    this.pending = [];       // seconds until each queued spawn
+    this.planned = 0;        // plan for the current rain spell
+    this.spawned = 0;        // queued + created for this spell
+    this.glyphs = [];
+    this.influence = [];
+    this.influenceCount = 0;
+    for (let i = 0; i < WHIRLPOOL_MAX * WHIRLPOOL_GLYPHS_PER; i++) {
+      this.glyphs.push({ x: 0, y: 0, glyph: "\xB7", size: 11, alpha: 0 });
+    }
+    for (let i = 0; i < WHIRLPOOL_MAX; i++) {
+      this.influence.push({ x: 0, y: 0, radius: 0, strength: 0, dir: 1 });
+    }
+  }
+  resize(w, h) {
+    this.width = w;
+    this.height = h;
+    this.active = [];
+    this.pending = [];
+    this.planned = 0;
+    this.spawned = 0;
+    this.influenceCount = 0;
+    for (const g of this.glyphs) g.alpha = 0;
+  }
+  spawn() {
+    const minSide = Math.min(this.width, this.height);
+    const margin = Math.min(300, minSide * 0.30);
+    const targetRadius = clamp(minSide * rand(0.22, 0.32), 120, 360);
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    return {
+      x: rand(margin, Math.max(margin + 1, this.width - margin)),
+      y: rand(margin, Math.max(margin + 1, this.height - margin)),
+      radius: targetRadius * 0.2,
+      targetRadius,
+      squash: WHIRLPOOL_SQUASH,
+      angle: rand(0, TAU),
+      spin: rand(0.7, 1.15) * dir,
+      dir,
+      phase: rand(0, TAU),
+      age: 0,
+      life: rand(35, 55),
+      deathAge: 0,
+      alpha: 0,
+      dying: false
+    };
+  }
+  step(dt, rainIntensity, plannedCount) {
+    if (this.width <= 0 || this.height <= 0) {
+      for (const g of this.glyphs) g.alpha = 0;
+      this.influenceCount = 0;
+      return;
+    }
+    const rainActive = rainIntensity > 0;
+    const planned = rainActive ? clamp(plannedCount | 0, 0, WHIRLPOOL_MAX) : 0;
+    if (planned !== this.planned) {
+      this.planned = planned;
+      this.spawned = 0;
+      this.pending = [];
+    }
+    while (this.spawned < planned) {
+      this.pending.push(rand(4, 8) + this.spawned * rand(8, 14));
+      this.spawned++;
+    }
+    for (let i = this.pending.length - 1; i >= 0; i--) {
+      this.pending[i] -= dt;
+      if (this.pending[i] <= 0 && this.active.length < WHIRLPOOL_MAX) {
+        this.pending.splice(i, 1);
+        this.active.push(this.spawn());
+      }
+    }
+    for (let i = this.active.length - 1; i >= 0; i--) {
+      const w = this.active[i];
+      if (!w.dying) {
+        w.age += dt;
+        w.angle += w.spin * dt * (0.65 + 0.35 * Math.min(1, w.age / 2));
+        const grow = Math.min(1, w.age / 3.5);
+        w.radius = w.targetRadius * (0.2 + 0.8 * grow);
+        w.alpha = Math.min(1, w.age / 2.5) * (0.86 + 0.14 * Math.sin(w.age * 1.9 + w.phase));
+        if (w.age > 1 && (!rainActive || planned === 0 || w.age >= w.life)) w.dying = true;
+      } else {
+        w.deathAge += dt;
+        w.angle += w.spin * dt * 1.6;
+        w.radius *= 1 + dt * 0.12;
+        w.alpha = Math.max(0, 1 - w.deathAge / 2) * 0.9;
+        if (w.deathAge >= 2) {
+          this.active.splice(i, 1);
+          continue;
+        }
+      }
+    }
+    this.influenceCount = 0;
+    for (const w of this.active) {
+      if (w.dying || w.alpha < 0.15) continue;
+      const inf = this.influence[this.influenceCount++];
+      inf.x = w.x;
+      inf.y = w.y;
+      inf.radius = w.radius;
+      inf.strength = w.alpha;
+      inf.dir = w.dir;
+    }
+    let slot = 0;
+    for (const w of this.active) {
+      for (let arm = 0; arm < WHIRLPOOL_ARMS; arm++) {
+        for (let k = 0; k < WHIRLPOOL_ARM_GLYPHS; k++) {
+          const t = (k + 1) / (WHIRLPOOL_ARM_GLYPHS + 1);
+          const rr = w.radius * (0.22 + 0.78 * t);
+          const ang = w.angle + arm * (TAU / WHIRLPOOL_ARMS) + t * 2.7;
+          const g = this.glyphs[slot++];
+          g.x = w.x + Math.cos(ang) * rr;
+          g.y = w.y + Math.sin(ang) * rr * WHIRLPOOL_SQUASH;
+          g.size = Math.round(13 - 4 * t);
+          g.glyph = WHIRLPOOL_ARM_CHARS[(k + arm) % WHIRLPOOL_ARM_CHARS.length];
+          g.alpha = w.alpha * (0.3 + 0.6 * t);
+        }
+      }
+      const core = this.glyphs[slot++];
+      core.x = w.x;
+      core.y = w.y;
+      core.size = 15;
+      core.glyph = "O";
+      core.alpha = w.alpha * 0.85;
+      const inner = this.glyphs[slot++];
+      inner.x = w.x + 4;
+      inner.y = w.y + 3;
+      inner.size = 11;
+      inner.glyph = "o";
+      inner.alpha = w.alpha * 0.6;
+    }
+    for (; slot < this.glyphs.length; slot++) this.glyphs[slot].alpha = 0;
   }
 };
 var OceanWaves = class {
@@ -1828,6 +2101,7 @@ class OceanEngine {
     this.rain = new RainSystem(54);
     this.rain.enabled = this.showRain;
     this.snow = new SnowSystem(70);
+    this.whirlpools = new WhirlpoolSystem();
     this.waves = new OceanWaves();
     this.waves.enabled = this.showWaves;
     this.clouds = new CloudSystem();
@@ -1855,8 +2129,9 @@ class OceanEngine {
       rainIntensity: 0,
       snowFlakes: [],
       snowIntensity: 0,
+      whirlpools: [],
+      whirlpoolGlyphs: this.whirlpools.glyphs,
       wakes: [],
-      clouds: [],
       swells: [],
       time: 0,
       interpolation: 0,
@@ -1901,7 +2176,7 @@ class OceanEngine {
     this.world.resize(width, height, this.cellWidth, this.cellHeight);
     this.rain.resize(width, height);
     this.snow.resize(width, height);
-    this.waves.resize(width, height);
+    this.whirlpools.resize(width, height);
     this.clouds.resize(width, height);
     this.ambience.resize(width, height);
 
@@ -1933,6 +2208,11 @@ class OceanEngine {
     const envSnap = this.environment.snapshot(overrides);
     this.ambience.step(clampedDt, envSnap.phase);
 
+    const effRainIntensity = this.showRain ? envSnap.rainIntensity : 0;
+    const effSnowIntensity = this.showRain ? (envSnap.snowIntensity || 0) : 0;
+    this.whirlpools.step(clampedDt, effRainIntensity, envSnap.whirlpoolCount || 0);
+    this.world.whirlpools = this.whirlpools.influence;
+    this.world.whirlpoolCount = this.whirlpools.influenceCount;
     if (this.prevWorldSharks.length !== this.world.sharks.length) {
       this.prevWorldSharks = this.world.sharks.map(s => ({
         nodes: new Float32Array(s.nodes)
@@ -1958,14 +2238,12 @@ class OceanEngine {
 
     const alpha = clamp(this.acc / PHYS_STEP, 0, 1);
 
-    const effRainIntensity = this.showRain ? envSnap.rainIntensity : 0;
     if (effRainIntensity > 0) {
       this.rain.enabled = true;
       this.rain.step(clampedDt);
     } else {
       this.rain.enabled = false;
     }
-    const effSnowIntensity = this.showRain ? (envSnap.snowIntensity || 0) : 0;
     this.snow.step(clampedDt, effSnowIntensity);
 
     if (this.showClouds) {
@@ -2034,8 +2312,9 @@ class OceanEngine {
     this.frame.rainIntensity = effRainIntensity;
     this.frame.snowFlakes = this.snow.flakes;
     this.frame.snowIntensity = effSnowIntensity;
+    this.frame.whirlpools = this.whirlpools.active;
+    this.frame.whirlpoolGlyphs = this.whirlpools.glyphs;
     this.frame.wakes = this.wakePool;
-    this.frame.clouds = this.clouds.clouds;
     this.frame.swells = this.waves.swells;
     this.frame.time = this.world.time;
     this.frame.interpolation = alpha;

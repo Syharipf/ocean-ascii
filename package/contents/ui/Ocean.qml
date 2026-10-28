@@ -46,6 +46,8 @@ Item {
     property int rainDropCount: 0
     property int rippleCount: 0
     property int snowFlakeCount: 0
+    property int whirlpoolCount: 0
+    property int whirlpoolGlyphCount: 0
     property var animalSlots: []
     onSharkKindChanged: if (engine) engine.setSharkKind(sharkKind)
     onShowCloudsChanged: if (engine) engine.setShowClouds(showClouds)
@@ -192,6 +194,46 @@ Item {
         showWaves: ocean.showWaves
         scenePalette: ocean.currentPalette
         light: ocean.currentLight
+    }
+
+    // Rare rain maelstrom: rotating glyph spiral churning the surface
+    Item {
+        anchors.fill: parent
+        visible: ocean.showRain && ocean.whirlpoolCount > 0
+
+        Repeater {
+            model: ocean.whirlpoolCount
+            Rectangle {
+                required property int index
+                readonly property var w: ocean.engine && ocean.engine.frame && ocean.engine.frame.whirlpools
+                                                 ? ocean.engine.frame.whirlpools[index] : null
+                visible: { ocean.frameSerial; return !!w && w.alpha > 0.02; }
+                width: { ocean.frameSerial; return w ? Math.max(8, w.radius * 0.95) : 8; }
+                height: { ocean.frameSerial; return w ? Math.max(5, w.radius * 0.95 * w.squash) : 5; }
+                x: { ocean.frameSerial; return w ? w.x - width * 0.5 : 0; }
+                y: { ocean.frameSerial; return w ? w.y - height * 0.5 : 0; }
+                radius: width * 0.5
+                color: "#04121c"
+                opacity: { ocean.frameSerial; return w ? w.alpha * 0.55 : 0; }
+            }
+        }
+
+        Repeater {
+            model: ocean.whirlpoolGlyphCount
+            Text {
+                required property int index
+                readonly property var g: ocean.engine && ocean.engine.frame && ocean.engine.frame.whirlpoolGlyphs
+                                                 ? ocean.engine.frame.whirlpoolGlyphs[index] : null
+                visible: { ocean.frameSerial; return !!g && g.alpha > 0.02; }
+                x: { ocean.frameSerial; return g ? g.x : 0; }
+                y: { ocean.frameSerial; return g ? g.y : 0; }
+                text: { ocean.frameSerial; return g ? g.glyph : ""; }
+                color: ocean.currentPalette && ocean.currentPalette.foam ? ocean.currentPalette.foam : "#b2dde0"
+                font.family: "monospace"
+                font.pixelSize: { ocean.frameSerial; return g ? g.size : 11; }
+                opacity: { ocean.frameSerial; return g ? g.alpha : 0; }
+            }
+        }
     }
 
     // Marine life (Creatures & Mythical beasts) swimming above water swells
@@ -388,6 +430,8 @@ Item {
         rainDropCount = (showRain && currentRainIntensity > 0 && snap.rainDrops) ? snap.rainDrops.length : 0;
         rippleCount = (showRain && currentRainIntensity > 0 && snap.ripples) ? snap.ripples.length : 0;
         snowFlakeCount = (showRain && currentSnowIntensity > 0 && snap.snowFlakes) ? snap.snowFlakes.length : 0;
+        whirlpoolCount = (showRain && snap.whirlpools) ? snap.whirlpools.length : 0;
+        whirlpoolGlyphCount = snap.whirlpoolGlyphs ? snap.whirlpoolGlyphs.length : 0;
         animalSlots = snap.animals || [];
 
         const cost = Date.now() - start;

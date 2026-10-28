@@ -107,6 +107,7 @@ class Environment {
     this.intervalStart = 0;
     this.intervalDuration = 180 + this.random() * 180; // dry 180-360s
     this.peakIntensity = 0.45 + this.random() * 0.40;  // 0.45-0.85
+    this.whirlpoolCount = 0; // planned whirlpools for the current wet spell
   }
 
   advance(seconds) {
@@ -119,9 +120,15 @@ class Environment {
         this.weatherKind = this.random() < 0.35 ? "snow" : "rain";
         this.intervalDuration = 60 + this.random() * 60;   // wet 60-120s
         this.peakIntensity = 0.45 + this.random() * 0.40;  // peak 0.45-0.85
+        this.whirlpoolCount = 0;
+        if (this.weatherKind === "rain") {
+          const roll = this.random();
+          this.whirlpoolCount = roll < 0.65 ? 0 : roll < 0.92 ? 1 : 2;
+        }
       } else {
         this.weatherKind = "clear";
         this.intervalDuration = 180 + this.random() * 180; // dry 180-360s
+        this.whirlpoolCount = 0;
       }
     }
   }
@@ -170,14 +177,18 @@ class Environment {
     let resolvedWeather = this.weatherKind;
     let rainIntensity = 0;
     let snowIntensity = 0;
+    let whirlpoolCount = this.whirlpoolCount;
     if (weather === "clear") {
       resolvedWeather = "clear";
+      whirlpoolCount = 0;
     } else if (weather === "rain") {
       resolvedWeather = "rain";
       rainIntensity = 0.65;
+      whirlpoolCount = 1;
     } else if (weather === "snow") {
       resolvedWeather = "snow";
       snowIntensity = 0.65;
+      whirlpoolCount = 0;
     } else {
       const precip = this.currentPrecipitationIntensity();
       if (this.weatherKind === "rain") {
@@ -194,6 +205,7 @@ class Environment {
       transition: effectiveTransition,
       rainIntensity,
       snowIntensity,
+      whirlpoolCount,
       palette: effectivePalette
     };
   }

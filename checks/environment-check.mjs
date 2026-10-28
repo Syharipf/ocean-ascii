@@ -148,3 +148,17 @@ test("deterministic snow schedule with random 0.1", () => {
   assert.equal(Math.round(s213.snowIntensity * 1000) / 1000, 0.49);
   assert.equal(s213.rainIntensity, 0);
 });
+
+test("rain whirlpools are rare, planned per spell, and rain-only", () => {
+  const seq = [0.5, 0.5, 0.5, 0.5, 0.5, 0.8];
+  let i = 0;
+  const env = new Environment({ random: () => seq[Math.min(i++, seq.length - 1)] });
+  env.advance(270); // dry duration 270s with random 0.5
+  assert.equal(env.snapshot().weather, "rain");
+  assert.equal(env.snapshot().whirlpoolCount, 1); // sixth draw 0.8 => one whirlpool
+  env.advance(90); // rain duration 90s with random 0.5
+  assert.equal(env.snapshot().whirlpoolCount, 0);
+  assert.equal(env.snapshot({ weather: "rain" }).whirlpoolCount, 1);
+  assert.equal(env.snapshot({ weather: "snow" }).whirlpoolCount, 0);
+  assert.equal(env.snapshot({ weather: "clear" }).whirlpoolCount, 0);
+});
