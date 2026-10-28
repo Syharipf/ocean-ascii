@@ -41,6 +41,11 @@ Item {
     property var currentPalette: null
     property real currentLight: 1.0
     property int fishCount: 0
+    property real currentRainIntensity: 0
+    property real currentSnowIntensity: 0
+    property int rainDropCount: 0
+    property int rippleCount: 0
+    property int snowFlakeCount: 0
     property var animalSlots: []
     onSharkKindChanged: if (engine) engine.setSharkKind(sharkKind)
     onShowCloudsChanged: if (engine) engine.setShowClouds(showClouds)
@@ -233,79 +238,112 @@ Item {
         }
     }
 
-    // Surface Snow layer (flakes drift below the rain layer, above the water)
+    // Surface Snow layer (snowflakes falling through air, landing, drifting, and melting on water)
     Item {
         anchors.fill: parent
-        visible: ocean.showRain && ocean.engine && ocean.engine.frame && ocean.engine.frame.snowIntensity > 0
+        visible: ocean.showRain && ocean.currentSnowIntensity > 0
 
         Repeater {
-            model: ocean.engine && ocean.engine.frame && ocean.engine.frame.snowFlakes ? ocean.engine.frame.snowFlakes.length : 0
+            model: ocean.snowFlakeCount
 
-            Text {
+            Item {
                 required property int index
-                readonly property var s: ocean.engine.frame.snowFlakes[index]
-                visible: s && s.y >= -12 && s.y <= ocean.height + 12 && s.x >= -16 && s.x <= ocean.width + 16
+                readonly property var s: ocean.engine && ocean.engine.frame && ocean.engine.frame.snowFlakes ? ocean.engine.frame.snowFlakes[index] : null
+                visible: s && s.y >= -16 && s.y <= ocean.height + 16 && s.x >= -20 && s.x <= ocean.width + 20 && s.alpha > 0.02
                 x: { ocean.frameSerial; return s ? s.x : 0; }
                 y: { ocean.frameSerial; return s ? s.y : 0; }
-                text: s ? s.glyph : "·"
-                color: ocean.currentPalette && ocean.currentPalette.foam ? ocean.currentPalette.foam : "#e8f7ff"
-                font.family: "monospace"
-                font.pixelSize: s ? s.size : 10
-                opacity: s ? s.alpha * ocean.engine.frame.snowIntensity * ocean.currentLight : 0
+                opacity: s ? Math.min(1.0, s.alpha * (0.65 + 0.35 * ocean.currentSnowIntensity)) : 0
+
+                // Cold water slush halo while floating on water (state 1)
+                Rectangle {
+                    visible: s && s.state === 1
+                    x: -width * 0.5
+                    y: -height * 0.5
+                    width: s ? s.size * 1.6 : 18
+                    height: s ? s.size * 0.9 : 10
+                    radius: width * 0.5
+                    color: "transparent"
+                    border.color: "#d0f4ff"
+                    border.width: 1
+                    opacity: s ? s.alpha * 0.4 : 0
+                }
+
+                // Snowflake character (drifts in air, then floats on water)
+                Text {
+                    x: -width * 0.5
+                    y: -height * 0.5
+                    text: s ? s.glyph : "*"
+                    color: "#ffffff"
+                    font.family: "monospace"
+                    font.pixelSize: s ? s.size : 14
+                    font.bold: true
+                }
             }
         }
     }
 
-    // Surface Rain layer (drops and ripples fall above swimming creatures)
+    // Surface Rain layer (falling rain streaks hitting water surface & blooming into ripples)
     Item {
         anchors.fill: parent
-        visible: ocean.showRain
+        visible: ocean.showRain && ocean.currentRainIntensity > 0
 
         Repeater {
-            model: ocean.showRain && ocean.engine && ocean.engine.frame && ocean.engine.frame.rainDrops ? ocean.engine.frame.rainDrops.length : 0
+            model: ocean.rainDropCount
             Item {
                 required property int index
-                readonly property var d: ocean.engine.frame.rainDrops[index]
-                visible: d && d.y >= 0 && d.y <= ocean.height && d.x >= 0 && d.x <= ocean.width && d.alpha > 0.05
-                x: d ? d.x : 0
-                y: d ? d.y : 0
-                opacity: d ? d.alpha * ocean.currentLight : 0
+                readonly property var d: ocean.engine && ocean.engine.frame && ocean.engine.frame.rainDrops ? ocean.engine.frame.rainDrops[index] : null
+                visible: d && d.y >= -20 && d.y <= ocean.height + 20 && d.x >= -20 && d.x <= ocean.width + 20 && d.alpha > 0.02
+                x: { ocean.frameSerial; return d ? d.x : 0; }
+                y: { ocean.frameSerial; return d ? d.y : 0; }
+                opacity: d ? Math.min(1.0, d.alpha * (0.7 + 0.3 * ocean.currentRainIntensity)) : 0
 
+                // State 0: Slanted streak falling in air
                 Rectangle {
-                    width: 1.5
-                    height: d ? d.length : 14
-                    color: "#bce8ff"
+                    visible: d && d.state === 0
+                    x: -2
+                    y: - (d ? d.streakLength : 18)
+                    width: 1.8
+                    height: d ? d.streakLength : 18
+                    color: "#c8f0ff"
                     rotation: -14
                     transformOrigin: Item.BottomRight
-                    anchors.bottom: parent.top
-                    anchors.right: parent.left
                 }
+
                 Text {
+                    visible: d && d.state === 0
+                    x: -4
+                    y: -4
                     text: "'"
                     color: "#ffffff"
                     font.family: "monospace"
-                    font.pixelSize: 11
-                    anchors.centerIn: parent
+                    font.pixelSize: 12
+                    font.bold: true
                 }
-            }
-        }
 
-        Repeater {
-            model: ocean.showRain && ocean.engine && ocean.engine.frame && ocean.engine.frame.ripples ? ocean.engine.frame.ripples.length : 0
-            Rectangle {
-                required property int index
-                readonly property var r: ocean.engine.frame.ripples[index]
-                readonly property real progress: r ? r.radius / r.maxRadius : 0
-                visible: r && progress < 1.0 && (1 - progress) * r.alpha > 0.02
-                x: r ? r.x - width * 0.5 : 0
-                y: r ? r.y - height * 0.5 : 0
-                width: r ? r.radius * 2 * 1.8 : 2
-                height: r ? r.radius * 2 * 0.75 : 2
-                radius: width * 0.5
-                color: "transparent"
-                border.color: "#99ecff"
-                border.width: 1.4
-                opacity: r ? Math.max(0, (1 - progress) * r.alpha * ocean.currentLight) : 0
+                // State 1: Surface ripple on water
+                Rectangle {
+                    visible: d && d.state === 1
+                    x: -width * 0.5
+                    y: -height * 0.5
+                    width: { ocean.frameSerial; return d ? Math.max(6, d.radius * 2 * 1.8) : 6; }
+                    height: { ocean.frameSerial; return d ? Math.max(3, d.radius * 2 * 0.75) : 3; }
+                    radius: width * 0.5
+                    color: "transparent"
+                    border.color: (d && d.radius / d.maxRadius < 0.35) ? "#ffffff" : "#a6f0ff"
+                    border.width: (d && d.radius / d.maxRadius < 0.25) ? 1.8 : 1.2
+                }
+
+                Text {
+                    visible: d && d.state === 1
+                    x: -width * 0.5
+                    y: -height * 0.5
+                    text: (d && d.radius / d.maxRadius < 0.22) ? (d ? d.glyph : "*") : ((d && d.radius / d.maxRadius < 0.52) ? "o" : "( )")
+                    color: (d && d.radius / d.maxRadius < 0.22) ? "#ffffff" : "#b0f0ff"
+                    font.family: "monospace"
+                    font.pixelSize: (d && d.radius / d.maxRadius < 0.22) ? 14 : 11
+                    font.bold: true
+                    opacity: d ? (1 - d.radius / d.maxRadius) * 0.95 : 0
+                }
             }
         }
     }
@@ -344,7 +382,12 @@ Item {
             environmentState = env;
             currentPalette = env.palette;
             currentLight = env.palette ? env.palette.light : 1.0;
+            currentRainIntensity = snap.rainIntensity !== undefined ? snap.rainIntensity : (env.rainIntensity || 0);
+            currentSnowIntensity = snap.snowIntensity !== undefined ? snap.snowIntensity : (env.snowIntensity || 0);
         }
+        rainDropCount = (showRain && currentRainIntensity > 0 && snap.rainDrops) ? snap.rainDrops.length : 0;
+        rippleCount = (showRain && currentRainIntensity > 0 && snap.ripples) ? snap.ripples.length : 0;
+        snowFlakeCount = (showRain && currentSnowIntensity > 0 && snap.snowFlakes) ? snap.snowFlakes.length : 0;
         animalSlots = snap.animals || [];
 
         const cost = Date.now() - start;

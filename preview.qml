@@ -155,15 +155,15 @@ Window {
                 Controls.ComboBox {
                     id: weatherSelector
                     anchors.verticalCenter: parent.verticalCenter
-                    implicitWidth: 140
+                    implicitWidth: 160
                     textRole: "text"
                     enabled: !tourCheck.checked
                     valueRole: "value"
                     model: [
                         { text: "Auto (Random)", value: "auto" },
-                        { text: "Clear (Cerius)", value: "clear" },
-                        { text: "Rain (0.65)", value: "rain" },
-                        { text: "Snow (0.65)", value: "snow" }
+                        { text: "Clear (Sunny)", value: "clear" },
+                        { text: "Rain (Water Impacts)", value: "rain" },
+                        { text: "Snow (Floating)", value: "snow" }
                     ]
                 }
 

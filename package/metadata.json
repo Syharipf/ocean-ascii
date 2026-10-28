@@ -3,7 +3,7 @@
     "KPlugin": {
         "Id": "org.local.lautascii",
         "Name": "Laut ASCII",
-        "Description": "Animated top-down ASCII ocean wallpaper with a 20-minute day/night cycle, random rain or snow, ASCII waves, and mythic sea creatures",
+        "Description": "Animated top-down ASCII ocean wallpaper for KDE Plasma 6 with a 20-minute day/night cycle, realistic precipitation with water impacts and ripples, ambient caustics, and mythic sea creatures",
         "Version": "1.2.0",
         "Authors": [{ "Name": "Syharipf" }],
         "License": "MIT",

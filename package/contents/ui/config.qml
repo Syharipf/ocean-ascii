@@ -17,25 +17,25 @@ Kirigami.FormLayout {
     Controls.ComboBox {
         id: sharkCombo
         implicitWidth: 380
-        Kirigami.FormData.label: "Hewan Laut:"
+        Kirigami.FormData.label: "Marine Life:"
         textRole: "text"
         valueRole: "value"
         model: [
-            { text: "Bergantian Otomatis (Hewan & Makhluk Mistis)", value: "all" },
-            { text: "Megalodon (Hiu Purba Raksasa)", value: "megalodon" },
-            { text: "Leviathan (Naga Laut Purba)", value: "leviathan" },
-            { text: "Kraken (Monster Gurita Abisal)", value: "kraken" },
-            { text: "Pari Manta (Manta Ray)", value: "manta" },
-            { text: "Penyu Laut (Sea Turtle)", value: "turtle" },
-            { text: "Paus / Orca (Whale)", value: "whale" },
-            { text: "Ikan Todak / Marlin (Swordfish)", value: "swordfish" },
-            { text: "Cumi-Cumi Raksasa (Giant Squid)", value: "squid" },
-            { text: "Ubur-Ubur (Jellyfish)", value: "jellyfish" },
-            { text: "Hammerhead (Hiu Martil)", value: "hammerhead" },
-            { text: "Tiger Shark (Hiu Harimau)", value: "tiger" },
-            { text: "Shortfin Mako (Hiu Mako)", value: "mako" },
-            { text: "Thresher Shark (Hiu Tikus)", value: "thresher" },
-            { text: "Zebra Shark (Hiu Zebra)", value: "zebra" }
+            { text: "Rotating Species (Real & Mythic Creatures)", value: "all" },
+            { text: "Megalodon (Ancient Apex Shark)", value: "megalodon" },
+            { text: "Leviathan (Abyssal Sea Serpent)", value: "leviathan" },
+            { text: "Kraken (Abyssal Terror)", value: "kraken" },
+            { text: "Manta Ray (manta)", value: "manta" },
+            { text: "Sea Turtle (turtle)", value: "turtle" },
+            { text: "Whale / Orca (whale)", value: "whale" },
+            { text: "Swordfish / Marlin (swordfish)", value: "swordfish" },
+            { text: "Giant Squid (squid)", value: "squid" },
+            { text: "Jellyfish (jellyfish)", value: "jellyfish" },
+            { text: "Hammerhead Shark (hammerhead)", value: "hammerhead" },
+            { text: "Tiger Shark (tiger)", value: "tiger" },
+            { text: "Shortfin Mako (mako)", value: "mako" },
+            { text: "Thresher Shark (thresher)", value: "thresher" },
+            { text: "Zebra Shark (zebra)", value: "zebra" }
         ]
         currentIndex: Math.max(0, indexOfValue(root.cfg_sharkKind))
         onActivated: root.cfg_sharkKind = currentValue
@@ -43,43 +43,43 @@ Kirigami.FormLayout {
 
     Controls.CheckBox {
         id: cloudCheck
-        Kirigami.FormData.label: "Siluet Awan Tipis:"
-        text: "Tampilkan siluet awan tipis transparan di langit laut"
+        Kirigami.FormData.label: "Translucent Clouds:"
+        text: "Display soft translucent ASCII cloud mist across the surface"
     }
 
     Controls.CheckBox {
         id: rainCheck
-        Kirigami.FormData.label: "Cuaca acak:"
-        text: "Izinkan hujan atau salju datang dan reda otomatis"
+        Kirigami.FormData.label: "Dynamic Weather:"
+        text: "Allow stochastic rain showers and gentle snowfall with water impacts"
     }
 
     Controls.CheckBox {
         id: waveCheck
-        Kirigami.FormData.label: "Gelombang Laut:"
-        text: "Tampilkan ombak dan alunan gelombang air laut"
+        Kirigami.FormData.label: "Ocean Swells:"
+        text: "Display undulating surface swells and foam wave crests"
     }
     Controls.CheckBox {
         id: mouseCheck
-        Kirigami.FormData.label: "Interaksi Mouse:"
-        text: "Ikan menghindar kursor dan riak air saat klik"
+        Kirigami.FormData.label: "Mouse Interaction:"
+        text: "Fish scatter from cursor and clicks trigger water ripples"
     }
 
     Controls.CheckBox {
         id: pauseCheck
-        Kirigami.FormData.label: "Hemat Baterai & Auto-Freeze:"
-        text: "Bekukan animasi saat ada jendela aplikasi terlihat di desktop saat ini"
+        Kirigami.FormData.label: "Battery Saver & Auto-Pause:"
+        text: "Freeze wallpaper animation when application windows are visible on desktop"
     }
 
     Controls.ComboBox {
         id: fpsCombo
         implicitWidth: 260
-        Kirigami.FormData.label: "Target FPS (Performa):"
+        Kirigami.FormData.label: "Target Frame Rate:"
         textRole: "text"
         valueRole: "value"
         model: [
-            { text: "30 FPS (beban lebih rendah)", value: 30 },
+            { text: "30 FPS (lower CPU load)", value: 30 },
             { text: "40 FPS", value: 40 },
-            { text: "60 FPS (beban lebih tinggi)", value: 60 }
+            { text: "60 FPS (higher smoothness)", value: 60 }
         ]
         currentIndex: Math.max(0, indexOfValue(root.cfg_fps))
         onActivated: root.cfg_fps = currentValue

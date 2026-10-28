@@ -1324,7 +1324,7 @@ function animalAppearance(kind, length, cellWidth, cellHeight) {
 }
 
 var RainSystem = class {
-  constructor(count = 64) {
+  constructor(count = 54) {
     this.drops = [];
     this.ripples = [];
     this.width = 0;
@@ -1339,49 +1339,71 @@ var RainSystem = class {
     this.ripples = [];
     if (w <= 0 || h <= 0) return;
     for (let i = 0; i < this.dropCount; i++) {
-      this.drops.push(this.createDrop(true));
+      this.drops.push(this.createDrop(w, h, true));
     }
   }
-  createDrop(initialRandomY = false) {
-    const angle = 1.3;
-    const speed = 700 + Math.random() * 300;
+  createDrop(w, h, randomProgress = false) {
+    const angle = 1.35; // slightly slanted wind angle
+    const travelDist = 140 + Math.random() * 80; // distance through air before impact
+    const targetX = Math.random() * (w + 80) - 40;
+    const targetY = Math.random() * (h + 80) - 40;
+    const fallDuration = 0.16 + Math.random() * 0.08; // fast fall 0.16-0.24s
+    const state = randomProgress ? (Math.random() < 0.5 ? 0 : 1) : 0;
+    const progress = randomProgress ? Math.random() : 0;
+    const glyphs = ["'", "·", "*", "^", "`"];
     return {
-      x: Math.random() * (this.width + 300) - 150,
-      y: initialRandomY ? Math.random() * this.height : -20 - Math.random() * 50,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      alpha: 0.45 + Math.random() * 0.45,
-      // Crisp & clearly visible!
-      length: 12 + Math.random() * 14
+      targetX,
+      targetY,
+      travelDist,
+      angle,
+      fallDuration,
+      streakLength: 16 + Math.random() * 16,
+      state, // 0 = falling in air, 1 = impact ripple on water
+      time: progress * fallDuration,
+      x: targetX,
+      y: targetY,
+      radius: state === 1 ? 2 + Math.random() * 12 : 2,
+      maxRadius: 14 + Math.random() * 16,
+      rippleSpeed: 28 + Math.random() * 18,
+      glyph: glyphs[Math.floor(Math.random() * glyphs.length)],
+      alpha: 0.85
     };
   }
   step(dt, onSplash) {
     if (!this.enabled || this.width <= 0 || this.height <= 0) return;
     for (let i = 0; i < this.drops.length; i++) {
       const d = this.drops[i];
-      d.x += d.vx * dt;
-      d.y += d.vy * dt;
-      if (d.y >= this.height || (d.y > 50 && Math.random() < (1 - Math.exp(-2.45 * dt)))) {
-        if (d.x >= 0 && d.x <= this.width && d.y >= 0 && d.y <= this.height) {
-          if (this.ripples.length < 32) {
-            this.ripples.push({
-              x: d.x,
-              y: d.y,
-              radius: 1,
-              maxRadius: 10 + Math.random() * 12,
-              alpha: 0.85 + Math.random() * 0.15
-            });
-            if (onSplash) onSplash(d.x, d.y);
+      if (d.state === 0) {
+        // Phase 1: Falling through air toward water surface
+        d.time += dt;
+        const progress = Math.min(1.0, d.time / d.fallDuration);
+        const rem = (1 - progress) * d.travelDist;
+        d.x = d.targetX - Math.cos(d.angle) * rem;
+        d.y = d.targetY - Math.sin(d.angle) * rem;
+        d.alpha = Math.min(1.0, 0.5 + progress * 0.5);
+
+        if (d.time >= d.fallDuration) {
+          // Strikes water surface!
+          d.state = 1;
+          d.time = 0;
+          d.x = d.targetX;
+          d.y = d.targetY;
+          d.radius = 2;
+          d.alpha = 0.95;
+          if (onSplash && d.targetX >= 0 && d.targetX <= this.width && d.targetY >= 0 && d.targetY <= this.height) {
+            onSplash(d.targetX, d.targetY);
           }
         }
-        this.drops[i] = this.createDrop(false);
-      }
-    }
-    for (let i = this.ripples.length - 1; i >= 0; i--) {
-      const r = this.ripples[i];
-      r.radius += 24 * dt;
-      if (r.radius >= r.maxRadius) {
-        this.ripples.splice(i, 1);
+      } else {
+        // Phase 2: Water impact: expanding circular ripple on surface
+        d.radius += d.rippleSpeed * dt;
+        const progress = d.radius / d.maxRadius;
+        d.alpha = Math.max(0, (1 - progress) * 0.9);
+
+        if (d.radius >= d.maxRadius) {
+          // Ripple dissipated into ocean -> respawn new drop falling from air
+          Object.assign(d, this.createDrop(this.width, this.height, false));
+        }
       }
     }
   }
@@ -1425,7 +1447,7 @@ var RainSystem = class {
   }
 };
 var SnowSystem = class {
-  constructor(count = 110) {
+  constructor(count = 70) {
     this.count = count;
     this.flakes = [];
     this.width = 0;
@@ -1437,42 +1459,77 @@ var SnowSystem = class {
     this.height = h;
     if (w <= 0 || h <= 0) return;
     if (this.flakes.length === 0) {
-      const glyphs = ["*", "+", "·", "'", "."];
       for (let i = 0; i < this.count; i++) {
-        this.flakes.push({
-          x: Math.random() * w,
-          y: Math.random() * h,
-          vx: -14 + Math.random() * 28,
-          vy: 18 + Math.random() * 26,
-          sway: 4 + Math.random() * 12,
-          swayFreq: 0.6 + Math.random() * 1.6,
-          phase: Math.random() * Math.PI * 2,
-          glyph: glyphs[Math.floor(Math.random() * glyphs.length)],
-          size: 8 + Math.random() * 6,
-          alpha: 0.30 + Math.random() * 0.55
-        });
+        this.flakes.push(this.createFlake(w, h, true));
       }
     }
+  }
+  createFlake(w, h, randomProgress = false) {
+    const glyphs = ["*", "❄", "+", "•", "✳", "*"];
+    const fallDuration = 1.6 + Math.random() * 1.2; // 1.6 - 2.8s falling through air
+    const floatDuration = 1.4 + Math.random() * 1.6; // 1.4 - 3.0s floating on water
+    const state = randomProgress ? (Math.random() < 0.45 ? 0 : 1) : 0;
+    const progress = randomProgress ? Math.random() : 0;
+    const startX = Math.random() * w;
+    const startY = Math.random() * h;
+    return {
+      x: startX,
+      y: startY,
+      vx: 12 + Math.random() * 18,   // wind drift
+      vy: 28 + Math.random() * 32,   // gentle descent
+      sway: 8 + Math.random() * 16,
+      swayFreq: 1.0 + Math.random() * 1.6,
+      phase: Math.random() * Math.PI * 2,
+      glyph: glyphs[Math.floor(Math.random() * glyphs.length)],
+      size: 11 + Math.random() * 6,
+      state, // 0 = falling in air toward water, 1 = landed on water surface
+      age: progress * (state === 0 ? fallDuration : floatDuration),
+      fallDuration,
+      floatDuration,
+      alpha: 0.85
+    };
   }
   step(dt, intensity) {
     this.enabled = intensity > 0;
     if (!this.enabled || this.width <= 0 || this.height <= 0) return;
     for (let i = 0; i < this.flakes.length; i++) {
       const f = this.flakes[i];
+      f.age += dt;
       f.phase += f.swayFreq * dt;
-      f.x += (f.vx + Math.sin(f.phase) * f.sway) * dt;
-      f.y += f.vy * dt;
-      if (f.y > this.height + 12) {
-        f.y = -12;
-        f.x = Math.random() * this.width;
-      } else if (f.y < -12) {
-        f.y = this.height + 12;
+
+      if (f.state === 0) {
+        // Phase 1: Falling through air toward water surface
+        f.x += (f.vx + Math.sin(f.phase) * f.sway) * dt;
+        f.y += f.vy * dt;
+        f.alpha = Math.min(0.95, 0.4 + (f.age / f.fallDuration) * 0.55);
+
+        if (f.age >= f.fallDuration) {
+          // Lands on the water surface!
+          f.state = 1;
+          f.age = 0;
+          f.vx = -4 + Math.random() * 8; // gentle water swell drift
+          f.vy = -2 + Math.random() * 6;
+          f.sway = 2 + Math.random() * 4;
+          f.alpha = 0.95;
+        }
+      } else {
+        // Phase 2: Floating on water surface and melting into seawater
+        f.x += (f.vx + Math.sin(f.phase) * f.sway) * dt;
+        f.y += f.vy * dt;
+        const meltProgress = f.age / f.floatDuration;
+        f.alpha = Math.max(0, (1 - meltProgress) * 0.9);
+
+        if (f.age >= f.floatDuration) {
+          // Melted away -> respawn new snowflake falling from air
+          Object.assign(f, this.createFlake(this.width, this.height, false));
+        }
       }
-      if (f.x > this.width + 16) {
-        f.x = -16;
-      } else if (f.x < -16) {
-        f.x = this.width + 16;
-      }
+
+      // Wrap if drifted offscreen
+      if (f.x < -20) f.x = this.width + 20;
+      else if (f.x > this.width + 20) f.x = -20;
+      if (f.y < -20) f.y = this.height + 20;
+      else if (f.y > this.height + 20) f.y = -20;
     }
   }
 };
@@ -1768,9 +1825,9 @@ class OceanEngine {
     this.cellHeight = 18;
 
     this.environment = new Environment();
-    this.rain = new RainSystem(64);
+    this.rain = new RainSystem(54);
     this.rain.enabled = this.showRain;
-    this.snow = new SnowSystem(110);
+    this.snow = new SnowSystem(70);
     this.waves = new OceanWaves();
     this.waves.enabled = this.showWaves;
     this.clouds = new CloudSystem();
@@ -1795,6 +1852,7 @@ class OceanEngine {
       fish: [],
       rainDrops: [],
       ripples: [],
+      rainIntensity: 0,
       snowFlakes: [],
       snowIntensity: 0,
       wakes: [],
@@ -1973,6 +2031,7 @@ class OceanEngine {
     this.frame.fish = this.world.fish;
     this.frame.rainDrops = this.rain.drops;
     this.frame.ripples = this.rain.ripples;
+    this.frame.rainIntensity = effRainIntensity;
     this.frame.snowFlakes = this.snow.flakes;
     this.frame.snowIntensity = effSnowIntensity;
     this.frame.wakes = this.wakePool;
@@ -2000,9 +2059,9 @@ class OceanEngine {
   onPointerDown(x, y) {
     if (!this.mouseInteraction) return;
     this.world.splash(x, y);
-    if (this.rain && this.rain.ripples.length < 32) {
+    if (this.rain && this.rain.ripples.length < 64) {
       this.rain.ripples.push({
-        x, y, radius: 1, maxRadius: 22, alpha: 1.0
+        x, y, radius: 2, maxRadius: 28, speed: 32, alpha: 1.0, glyph: "*", age: 0, lifetime: 1.0
       });
     }
   }

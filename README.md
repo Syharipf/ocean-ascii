@@ -102,9 +102,9 @@ Measured on CachyOS, Wayland, with 12 logical CPUs. These samples are not guaran
 | --- | --- |
 | Scene updates, 1920 × 1200, target 30 FPS | 30.0 updates/s (presented 59.8 FPS window swaps) |
 | Frame update cost, p95 | 8 ms (median 4 ms, mean 4.5 ms, max 12 ms; qualityLevel 0) |
-| Plasma with wallpaper running, 10-second sample | 83.5% of one logical CPU; 6.96% of total 12-CPU capacity; RSS 469.3 MiB |
-| Plasma with automatic pause settled, 10-second sample | 0.00% of one logical CPU; RSS 470.3 MiB |
-| docs/preview.gif | 960 × 600, 120 frames, 12.0 s, 3.70 MB |
+| Plasma with wallpaper running, 10-second sample | 28.9% of one logical CPU; 2.40% of total 12-CPU capacity; RSS 400.3 MiB |
+| Plasma with automatic pause settled, 10-second sample | 0.10% of one logical CPU; RSS 400.7 MiB |
+| docs/preview.gif | 960 × 600, 240 frames, 24.0 s, 7.70 MB |
 
 CPU and memory values cover **the entire `plasmashell` process**, including panels and other widgets—not the wallpaper alone. The renderer deliberately leaves idle time between paints, so it can miss its FPS target even when individual render time is lower than the complete frame interval.
 

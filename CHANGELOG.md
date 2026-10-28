@@ -2,10 +2,12 @@
 
 ## 1.2.0
 
-- Dynamic ambient particles: caustics specks, foam sparkles, floating dust motes, and surface birds per cycle phase.
-- Snow weather system with drifting flakes and swaying trajectories alongside rain.
-- Standalone preview tour cycling all 12 phase and weather combinations.
-- Rebuilt preview animation covering all 12 combinations in 24 seconds.
+- **Realistic top-down precipitation:** Rain drops streak through the air and strike the water surface, triggering instantaneous splash crowns and expanding circular ripple waves (`o` -> `( )`). Snow flakes descend with wind sway, land softly on the sea, float with the ocean swell, and melt into seawater.
+- **Dynamic ambient system:** Caustic light specks, foam sparkles, floating dust motes, and distant seabirds rendered per cycle phase.
+- **12-Combination standalone preview tour:** Automated 2-second tour cycling all 4 day/night phases across Clear, Rain, and Snow weather states.
+- **English configuration UI:** Full English localization across all settings, creature names, and package metadata.
+- **High-performance native rendering:** Zero-anchor flat item hierarchy maintaining 30 FPS scene updates with 8 ms p95 frame update times.
+- **Rebuilt 24-second preview:** `docs/preview.gif` montage covering all 12 combinations within budget ($7.70\text{ MB} \le 8\text{ MB}$).
 
 ## 1.1.0
 
