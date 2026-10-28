@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- **Reworked mythic creature silhouettes:**
+  - **Kraken**: True cephalopod anatomy with a forward-streaming arm crown of 8 undulating tentacles, 2 extended paddle-tipped feeding tentacles trailing along the flanks, glowing lateral eyes, and a hydrodynamic muscular mantle with terminal fins.
+  - **Megalodon**: Colossal apex predator proportions with a broad blunt snout, massive barrel girth (~39% body length), expansive swept falcate pectoral wings, imposing dorsal ridge, and high-aspect crescent tail.
+  - **Leviathan**: Refined sea serpent silhouette with undulating reptilian humps, unbroken serrated dorsal frill, paired flippers, and luminous bioluminescent skin without facial voids.
+- **Rain maelstroms (whirlpools):** Enlarged vortex radius (120–360 px), 4 curved spiral glyph arms (58 glyphs per pool), and borderless dark vortex core for natural visual blending.
+
 ## 1.2.0
 
 - **Realistic top-down precipitation:** Rain drops streak through the air and strike the water surface, triggering instantaneous splash crowns and expanding circular ripple waves (`o` -> `( )`). Snow flakes descend with wind sway, land softly on the sea, float with the ocean swell, and melt into seawater.
